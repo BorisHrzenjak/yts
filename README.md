@@ -27,11 +27,17 @@ yts -s "https://youtube.com/watch?v=VIDEO_ID"
 # Get both transcription and summary
 yts -t -s "https://youtube.com/watch?v=VIDEO_ID"
 
-# Save results to file (in current directory)
+# Save results to file (in current directory, default JSON format)
 yts -t -s --save "https://youtube.com/watch?v=VIDEO_ID"
 
-# Save results to specific directory
-yts -t -s --save -o path/to/directory "https://youtube.com/watch?v=VIDEO_ID"
+# Save as text file
+yts -t -s --save --format txt "https://youtube.com/watch?v=VIDEO_ID"
+
+# Save as markdown file
+yts -t -s --save --format md "https://youtube.com/watch?v=VIDEO_ID"
+
+# Save to specific directory
+yts -t -s --save --format md -o path/to/directory "https://youtube.com/watch?v=VIDEO_ID"
 ```
 
 ## Features
@@ -41,12 +47,15 @@ yts -t -s --save -o path/to/directory "https://youtube.com/watch?v=VIDEO_ID"
 - Generates concise summaries using Mistral AI's large language model
 - Simple command-line interface
 - Environment variable management for API keys
-- Save results to JSON files with video title and timestamps
+- Multiple output formats:
+  - JSON (structured data)
+  - Text (human-readable)
+  - Markdown (formatted documentation)
 - Includes video metadata (title, channel, upload date)
 
-## Output Format
+## Output Formats
 
-When saving to file, the results are stored in JSON format with the following structure:
+### JSON Format
 ```json
 {
   "video_id": "VIDEO_ID",
@@ -59,9 +68,45 @@ When saving to file, the results are stored in JSON format with the following st
 }
 ```
 
-The file is named in the format: `Video Title_TIMESTAMP.json`
+### Text Format
+```
+YouTube Video Transcription and Summary
+========================================
+Title: Video Title
+Channel: Channel Name
+Upload Date: YYYYMMDD
+Video ID: VIDEO_ID
+========================================
 
-The filename is sanitized to remove invalid characters and limited to a reasonable length.
+Transcription:
+----------------------------------------
+[Transcription text]
+
+Summary:
+----------------------------------------
+[Summary text]
+```
+
+### Markdown Format
+```markdown
+# Video Title
+
+## Video Information
+- **Channel:** Channel Name
+- **Upload Date:** YYYYMMDD
+- **Video ID:** VIDEO_ID
+
+## Transcription
+```
+[Transcription text]
+```
+
+## Summary
+[Summary text]
+```
+
+The files are named in the format: `Video Title_TIMESTAMP.{format}`
+where format is one of: json, txt, or md
 
 ## Requirements
 

@@ -9,6 +9,12 @@ from mistralai.models.chat_completion import ChatMessage
 import re
 from datetime import datetime
 import json
+from enum import Enum
+
+class OutputFormat(Enum):
+    JSON = 'json'
+    TEXT = 'txt'
+    MARKDOWN = 'md'
 
 def load_environment():
     load_dotenv()
@@ -84,7 +90,54 @@ def sanitize_filename(filename):
     # Limit length to avoid too long filenames
     return sanitized[:100]
 
-def save_to_file(video_id, video_info, transcript=None, summary=None, output_dir=None):
+def format_text_output(video_info, transcript=None, summary=None):
+    """Format output for text file."""
+    lines = []
+    lines.append("YouTube Video Transcription and Summary")
+    lines.append("=" * 40)
+    lines.append(f"Title: {video_info.get('title', 'N/A')}")
+    lines.append(f"Channel: {video_info.get('channel', 'N/A')}")
+    lines.append(f"Upload Date: {video_info.get('upload_date', 'N/A')}")
+    lines.append(f"Video ID: {video_info.get('video_id', 'N/A')}")
+    lines.append("=" * 40)
+    
+    if transcript:
+        lines.append("\nTranscription:")
+        lines.append("-" * 40)
+        lines.append(transcript)
+    
+    if summary:
+        lines.append("\nSummary:")
+        lines.append("-" * 40)
+        lines.append(summary)
+    
+    return '\n'.join(lines)
+
+def format_markdown_output(video_info, transcript=None, summary=None):
+    """Format output for markdown file."""
+    lines = []
+    lines.append(f"# {video_info.get('title', 'YouTube Video Transcription and Summary')}")
+    lines.append("")
+    lines.append("## Video Information")
+    lines.append(f"- **Channel:** {video_info.get('channel', 'N/A')}")
+    lines.append(f"- **Upload Date:** {video_info.get('upload_date', 'N/A')}")
+    lines.append(f"- **Video ID:** {video_info.get('video_id', 'N/A')}")
+    lines.append("")
+    
+    if transcript:
+        lines.append("## Transcription")
+        lines.append("```")
+        lines.append(transcript)
+        lines.append("```")
+        lines.append("")
+    
+    if summary:
+        lines.append("## Summary")
+        lines.append(summary)
+    
+    return '\n'.join(lines)
+
+def save_to_file(video_id, video_info, output_format, transcript=None, summary=None, output_dir=None):
     """Save transcript and/or summary to file."""
     if not output_dir:
         output_dir = os.getcwd()
@@ -95,29 +148,41 @@ def save_to_file(video_id, video_info, transcript=None, summary=None, output_dir
     # Generate timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # Prepare data for saving
-    data = {
-        "video_id": video_id,
-        "title": video_info.get('title', ''),
-        "channel": video_info.get('channel', ''),
-        "upload_date": video_info.get('upload_date', ''),
-        "timestamp": timestamp
-    }
-    
-    if transcript:
-        data["transcript"] = transcript
-    if summary:
-        data["summary"] = summary
+    # Add video_id to info for completeness
+    video_info['video_id'] = video_id
     
     # Generate filename using video title
     title = video_info.get('title', video_id)
     safe_title = sanitize_filename(title)
-    filename = f"{safe_title}_{timestamp}.json"
+    filename = f"{safe_title}_{timestamp}.{output_format.value}"
     filepath = os.path.join(output_dir, filename)
     
-    # Save to file
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    # Prepare and save content based on format
+    if output_format == OutputFormat.JSON:
+        data = {
+            "video_id": video_id,
+            "title": video_info.get('title', ''),
+            "channel": video_info.get('channel', ''),
+            "upload_date": video_info.get('upload_date', ''),
+            "timestamp": timestamp
+        }
+        if transcript:
+            data["transcript"] = transcript
+        if summary:
+            data["summary"] = summary
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    
+    elif output_format == OutputFormat.TEXT:
+        content = format_text_output(video_info, transcript, summary)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+    
+    elif output_format == OutputFormat.MARKDOWN:
+        content = format_markdown_output(video_info, transcript, summary)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
     
     return filepath
 
@@ -128,6 +193,8 @@ def main():
     parser.add_argument('-s', '--summary', action='store_true', help='Get video summary')
     parser.add_argument('-o', '--output', help='Output directory for saving results')
     parser.add_argument('--save', action='store_true', help='Save results to file')
+    parser.add_argument('--format', choices=['json', 'txt', 'md'], default='json',
+                      help='Output format (json, txt, or md)')
     
     args = parser.parse_args()
     
@@ -178,7 +245,8 @@ def main():
     
     # Save to file if requested
     if args.save and (transcript or summary):
-        filepath = save_to_file(video_id, video_info, transcript, summary, args.output)
+        output_format = OutputFormat(args.format)
+        filepath = save_to_file(video_id, video_info, output_format, transcript, summary, args.output)
         print(f"\nResults saved to: {filepath}")
 
 if __name__ == "__main__":

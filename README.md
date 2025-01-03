@@ -26,6 +26,12 @@ yts -s "https://youtube.com/watch?v=VIDEO_ID"
 
 # Get both transcription and summary
 yts -t -s "https://youtube.com/watch?v=VIDEO_ID"
+
+# Save results to file (in current directory)
+yts -t -s --save "https://youtube.com/watch?v=VIDEO_ID"
+
+# Save results to specific directory
+yts -t -s --save -o path/to/directory "https://youtube.com/watch?v=VIDEO_ID"
 ```
 
 ## Features
@@ -35,6 +41,21 @@ yts -t -s "https://youtube.com/watch?v=VIDEO_ID"
 - Generates concise summaries using Mistral AI's large language model
 - Simple command-line interface
 - Environment variable management for API keys
+- Save results to JSON files with timestamps
+
+## Output Format
+
+When saving to file, the results are stored in JSON format with the following structure:
+```json
+{
+  "video_id": "VIDEO_ID",
+  "timestamp": "YYYYMMDD_HHMMSS",
+  "transcript": "Video transcription...",
+  "summary": "Video summary..."
+}
+```
+
+The file is named in the format: `yts_VIDEO_ID_TIMESTAMP.json`
 
 ## Requirements
 

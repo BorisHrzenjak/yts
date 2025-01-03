@@ -10,6 +10,8 @@ import re
 from datetime import datetime
 import json
 from enum import Enum
+from nltk.sentiment import SentimentIntensityAnalyzer
+import nltk
 
 class OutputFormat(Enum):
     JSON = 'json'
@@ -82,6 +84,29 @@ def get_summary(text):
         print(f"Error in getting summary: {e}")
         return None
 
+def get_sentiment(text):
+    """Analyze sentiment of the text using VADER sentiment analyzer."""
+    try:
+        nltk.download('vader_lexicon', quiet=True)
+        sia = SentimentIntensityAnalyzer()
+        sentiment = sia.polarity_scores(text)
+        
+        # Determine overall sentiment
+        if sentiment['compound'] >= 0.05:
+            overall = 'Positive'
+        elif sentiment['compound'] <= -0.05:
+            overall = 'Negative'
+        else:
+            overall = 'Neutral'
+            
+        return {
+            'scores': sentiment,
+            'overall': overall
+        }
+    except Exception as e:
+        print(f"Error in sentiment analysis: {e}")
+        return None
+
 def sanitize_filename(filename):
     """Remove invalid characters from filename."""
     # Remove or replace invalid characters
@@ -90,7 +115,7 @@ def sanitize_filename(filename):
     # Limit length to avoid too long filenames
     return sanitized[:100]
 
-def format_text_output(video_info, transcript=None, summary=None):
+def format_text_output(video_info, transcript=None, summary=None, sentiment=None):
     """Format output for text file."""
     lines = []
     lines.append("YouTube Video Transcription and Summary")
@@ -99,7 +124,6 @@ def format_text_output(video_info, transcript=None, summary=None):
     lines.append(f"Channel: {video_info.get('channel', 'N/A')}")
     lines.append(f"Upload Date: {video_info.get('upload_date', 'N/A')}")
     lines.append(f"Video ID: {video_info.get('video_id', 'N/A')}")
-    lines.append("=" * 40)
     
     if transcript:
         lines.append("\nTranscription:")
@@ -110,34 +134,68 @@ def format_text_output(video_info, transcript=None, summary=None):
         lines.append("\nSummary:")
         lines.append("-" * 40)
         lines.append(summary)
+        
+    if sentiment:
+        lines.append("\nSentiment Analysis:")
+        lines.append("-" * 40)
+        lines.append(f"Overall Sentiment: {sentiment['overall']}")
+        lines.append("\nDetailed Scores Explanation:")
+        lines.append("- Positive Score: Measures the intensity of positive emotions/opinions")
+        lines.append("- Neutral Score: Measures the intensity of neutral or objective content")
+        lines.append("- Negative Score: Measures the intensity of negative emotions/opinions")
+        lines.append("- Compound Score: Combined score normalized between -1 (very negative) and +1 (very positive)")
+        lines.append("  * Values ≥ 0.05 indicate positive sentiment")
+        lines.append("  * Values ≤ -0.05 indicate negative sentiment")
+        lines.append("  * Values between -0.05 and 0.05 indicate neutral sentiment")
+        lines.append("\nScores:")
+        lines.append(f"- Positive: {sentiment['scores']['pos']:.3f}")
+        lines.append(f"- Neutral: {sentiment['scores']['neu']:.3f}")
+        lines.append(f"- Negative: {sentiment['scores']['neg']:.3f}")
+        lines.append(f"- Compound: {sentiment['scores']['compound']:.3f}")
     
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
-def format_markdown_output(video_info, transcript=None, summary=None):
+def format_markdown_output(video_info, transcript=None, summary=None, sentiment=None):
     """Format output for markdown file."""
     lines = []
-    lines.append(f"# {video_info.get('title', 'YouTube Video Transcription and Summary')}")
-    lines.append("")
-    lines.append("## Video Information")
-    lines.append(f"- **Channel:** {video_info.get('channel', 'N/A')}")
-    lines.append(f"- **Upload Date:** {video_info.get('upload_date', 'N/A')}")
-    lines.append(f"- **Video ID:** {video_info.get('video_id', 'N/A')}")
-    lines.append("")
+    lines.append("# YouTube Video Transcription and Summary")
+    lines.append(f"**Title:** {video_info.get('title', 'N/A')}")
+    lines.append(f"**Channel:** {video_info.get('channel', 'N/A')}")
+    lines.append(f"**Upload Date:** {video_info.get('upload_date', 'N/A')}")
+    lines.append(f"**Video ID:** {video_info.get('video_id', 'N/A')}")
     
     if transcript:
-        lines.append("## Transcription")
-        lines.append("```")
+        lines.append("\n## Transcription")
         lines.append(transcript)
-        lines.append("```")
-        lines.append("")
     
     if summary:
-        lines.append("## Summary")
+        lines.append("\n## Summary")
         lines.append(summary)
+        
+    if sentiment:
+        lines.append("\n## Sentiment Analysis")
+        lines.append(f"**Overall Sentiment:** {sentiment['overall']}")
+        
+        lines.append("\n### Understanding the Scores")
+        lines.append("The sentiment analysis provides several scores that help understand the emotional tone of the content:")
+        lines.append("")
+        lines.append("- **Positive Score:** Measures the intensity of positive emotions/opinions")
+        lines.append("- **Neutral Score:** Measures the intensity of neutral or objective content")
+        lines.append("- **Negative Score:** Measures the intensity of negative emotions/opinions")
+        lines.append("- **Compound Score:** Combined score normalized between -1 (very negative) and +1 (very positive)")
+        lines.append("  * Values ≥ 0.05 indicate positive sentiment")
+        lines.append("  * Values ≤ -0.05 indicate negative sentiment")
+        lines.append("  * Values between -0.05 and 0.05 indicate neutral sentiment")
+        
+        lines.append("\n### Detailed Scores")
+        lines.append(f"- Positive: {sentiment['scores']['pos']:.3f}")
+        lines.append(f"- Neutral: {sentiment['scores']['neu']:.3f}")
+        lines.append(f"- Negative: {sentiment['scores']['neg']:.3f}")
+        lines.append(f"- Compound: {sentiment['scores']['compound']:.3f}")
     
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
-def save_to_file(video_id, video_info, output_format, transcript=None, summary=None, output_dir=None):
+def save_to_file(video_id, video_info, output_format, transcript=None, summary=None, sentiment=None, output_dir=None):
     """Save transcript and/or summary to file."""
     if not output_dir:
         output_dir = os.getcwd()
@@ -170,17 +228,19 @@ def save_to_file(video_id, video_info, output_format, transcript=None, summary=N
             data["transcript"] = transcript
         if summary:
             data["summary"] = summary
+        if sentiment:
+            data["sentiment"] = sentiment
         
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
     
     elif output_format == OutputFormat.TEXT:
-        content = format_text_output(video_info, transcript, summary)
+        content = format_text_output(video_info, transcript, summary, sentiment)
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
     
     elif output_format == OutputFormat.MARKDOWN:
-        content = format_markdown_output(video_info, transcript, summary)
+        content = format_markdown_output(video_info, transcript, summary, sentiment)
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
     
@@ -191,6 +251,7 @@ def main():
     parser.add_argument('url', help='YouTube video URL')
     parser.add_argument('-t', '--transcribe', action='store_true', help='Get video transcription')
     parser.add_argument('-s', '--summary', action='store_true', help='Get video summary')
+    parser.add_argument('-sentiment', '--sentiment', action='store_true', help='Perform sentiment analysis')
     parser.add_argument('-o', '--output', help='Output directory for saving results')
     parser.add_argument('--save', action='store_true', help='Save results to file')
     parser.add_argument('--format', choices=['json', 'txt', 'md'], default='json',
@@ -221,8 +282,9 @@ def main():
     # Get transcript
     transcript = None
     summary = None
+    sentiment_result = None
     
-    if args.transcribe or args.summary:
+    if args.transcribe or args.summary or args.sentiment:
         transcript = get_transcript(video_id)
         if not transcript:
             print("Failed to get transcript")
@@ -242,11 +304,34 @@ def main():
             print(summary)
         else:
             print("Failed to generate summary")
+            
+    # Get sentiment if requested
+    if args.sentiment:
+        sentiment_result = get_sentiment(transcript)
+        if sentiment_result:
+            print("\nSentiment Analysis:")
+            print("-" * 50)
+            print(f"Overall Sentiment: {sentiment_result['overall']}")
+            print("\nUnderstanding the Scores:")
+            print("- Positive Score: Measures the intensity of positive emotions/opinions")
+            print("- Neutral Score: Measures the intensity of neutral or objective content")
+            print("- Negative Score: Measures the intensity of negative emotions/opinions")
+            print("- Compound Score: Combined score between -1 (very negative) and +1 (very positive)")
+            print("  * Values ≥ 0.05 indicate positive sentiment")
+            print("  * Values ≤ -0.05 indicate negative sentiment")
+            print("  * Values between -0.05 and 0.05 indicate neutral sentiment")
+            print("\nDetailed Scores:")
+            print(f"Positive: {sentiment_result['scores']['pos']:.3f}")
+            print(f"Neutral: {sentiment_result['scores']['neu']:.3f}")
+            print(f"Negative: {sentiment_result['scores']['neg']:.3f}")
+            print(f"Compound: {sentiment_result['scores']['compound']:.3f}")
+        else:
+            print("Failed to perform sentiment analysis")
     
     # Save to file if requested
-    if args.save and (transcript or summary):
+    if args.save and (transcript or summary or sentiment_result):
         output_format = OutputFormat(args.format)
-        filepath = save_to_file(video_id, video_info, output_format, transcript, summary, args.output)
+        filepath = save_to_file(video_id, video_info, output_format, transcript, summary, sentiment_result, args.output)
         print(f"\nResults saved to: {filepath}")
 
 if __name__ == "__main__":

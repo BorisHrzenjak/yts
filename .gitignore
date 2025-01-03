@@ -4,7 +4,29 @@ __pycache__/
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
 
 # Virtual environments
-.venv
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Generated files
+*.json
+!pyproject.json
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db

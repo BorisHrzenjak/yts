@@ -41,7 +41,8 @@ yts -t -s --save -o path/to/directory "https://youtube.com/watch?v=VIDEO_ID"
 - Generates concise summaries using Mistral AI's large language model
 - Simple command-line interface
 - Environment variable management for API keys
-- Save results to JSON files with timestamps
+- Save results to JSON files with video title and timestamps
+- Includes video metadata (title, channel, upload date)
 
 ## Output Format
 
@@ -49,13 +50,18 @@ When saving to file, the results are stored in JSON format with the following st
 ```json
 {
   "video_id": "VIDEO_ID",
+  "title": "Video Title",
+  "channel": "Channel Name",
+  "upload_date": "YYYYMMDD",
   "timestamp": "YYYYMMDD_HHMMSS",
   "transcript": "Video transcription...",
   "summary": "Video summary..."
 }
 ```
 
-The file is named in the format: `yts_VIDEO_ID_TIMESTAMP.json`
+The file is named in the format: `Video Title_TIMESTAMP.json`
+
+The filename is sanitized to remove invalid characters and limited to a reasonable length.
 
 ## Requirements
 

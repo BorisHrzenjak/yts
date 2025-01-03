@@ -29,6 +29,25 @@ def extract_video_id(url):
             return match.group(1)
     return None
 
+def get_video_info(url):
+    """Get video title and other metadata using yt-dlp."""
+    try:
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': True
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return {
+                'title': info.get('title', ''),
+                'channel': info.get('channel', ''),
+                'upload_date': info.get('upload_date', '')
+            }
+    except Exception as e:
+        print(f"Could not get video info: {e}")
+        return None
+
 def get_transcript(video_id):
     """Get transcript using youtube_transcript_api."""
     try:
@@ -57,7 +76,15 @@ def get_summary(text):
         print(f"Error in getting summary: {e}")
         return None
 
-def save_to_file(video_id, transcript=None, summary=None, output_dir=None):
+def sanitize_filename(filename):
+    """Remove invalid characters from filename."""
+    # Remove or replace invalid characters
+    invalid_chars = r'[<>:"/\\|?*]'
+    sanitized = re.sub(invalid_chars, '_', filename)
+    # Limit length to avoid too long filenames
+    return sanitized[:100]
+
+def save_to_file(video_id, video_info, transcript=None, summary=None, output_dir=None):
     """Save transcript and/or summary to file."""
     if not output_dir:
         output_dir = os.getcwd()
@@ -71,6 +98,9 @@ def save_to_file(video_id, transcript=None, summary=None, output_dir=None):
     # Prepare data for saving
     data = {
         "video_id": video_id,
+        "title": video_info.get('title', ''),
+        "channel": video_info.get('channel', ''),
+        "upload_date": video_info.get('upload_date', ''),
         "timestamp": timestamp
     }
     
@@ -79,8 +109,10 @@ def save_to_file(video_id, transcript=None, summary=None, output_dir=None):
     if summary:
         data["summary"] = summary
     
-    # Generate filename
-    filename = f"yts_{video_id}_{timestamp}.json"
+    # Generate filename using video title
+    title = video_info.get('title', video_id)
+    safe_title = sanitize_filename(title)
+    filename = f"{safe_title}_{timestamp}.json"
     filepath = os.path.join(output_dir, filename)
     
     # Save to file
@@ -111,6 +143,14 @@ def main():
         print("Error: Invalid YouTube URL")
         return
 
+    # Get video info if saving is requested
+    video_info = None
+    if args.save:
+        video_info = get_video_info(args.url)
+        if not video_info:
+            print("Warning: Could not get video info, using video ID in filename")
+            video_info = {'title': video_id}
+
     # Get transcript
     transcript = None
     summary = None
@@ -138,7 +178,7 @@ def main():
     
     # Save to file if requested
     if args.save and (transcript or summary):
-        filepath = save_to_file(video_id, transcript, summary, args.output)
+        filepath = save_to_file(video_id, video_info, transcript, summary, args.output)
         print(f"\nResults saved to: {filepath}")
 
 if __name__ == "__main__":

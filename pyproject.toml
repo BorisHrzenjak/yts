@@ -1,0 +1,24 @@
+[project]
+name = "yts"
+version = "0.1.0"
+description = "YouTube Transcription and Summary Tool"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "youtube-transcript-api==0.6.3",
+    "python-dotenv",
+    "yt-dlp",
+    "mistralai==0.4.2",
+    "ffmpeg-python",
+    "psutil>=6.1.1",
+]
+
+[project.scripts]
+yts = "yts.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true

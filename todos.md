@@ -1,11 +1,11 @@
 List of features to add:
 
-1. **Sentiment Analysis**  
+1. **Sentiment Analysis** - **ADDED**  
    - Analyze the emotional tone of the video content.  
    - Provide insights into whether the content is positive, negative, or neutral.  
    - Useful for content creators and researchers.  
 
-2. **Key Points Extraction**  
+2. **Key Points Extraction** - **ADDED**  
    - Extract main topics, key arguments, or important timestamps.  
    - Create a bullet-point list of the most important moments.  
    - Help viewers quickly navigate to specific parts of the video.  
